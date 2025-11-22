@@ -8,6 +8,19 @@
   <h1>Edit Jadwal Kerja</h1>
 </div>
 <div class="section-body">
+  @if($errors->any())
+    <div class="alert alert-danger alert-dismissible show fade">
+      <div class="alert-body">
+        <button class="close" data-dismiss="alert"><span>&times;</span></button>
+        <ul class="mb-0">
+          @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+          @endforeach
+        </ul>
+      </div>
+    </div>
+  @endif
+  
   <div class="card">
     <form action="{{ route('admin.work-schedules.update', $workSchedule) }}" method="POST">
       @csrf
@@ -66,6 +79,55 @@
         <div class="form-group">
           <label>Toleransi Keterlambatan (menit) <span class="text-danger">*</span></label>
           <input type="number" name="late_tolerance" class="form-control" value="{{ old('late_tolerance', $workSchedule->late_tolerance) }}" min="0" max="60" required>
+        </div>
+        <div class="form-group">
+          <label>Hari Kerja</label>
+          <div class="row">
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="monday" class="custom-control-input" id="edit-day-monday" {{ (is_array(old('working_days')) && in_array('monday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('monday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-monday">Senin</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="tuesday" class="custom-control-input" id="edit-day-tuesday" {{ (is_array(old('working_days')) && in_array('tuesday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('tuesday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-tuesday">Selasa</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="wednesday" class="custom-control-input" id="edit-day-wednesday" {{ (is_array(old('working_days')) && in_array('wednesday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('wednesday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-wednesday">Rabu</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="thursday" class="custom-control-input" id="edit-day-thursday" {{ (is_array(old('working_days')) && in_array('thursday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('thursday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-thursday">Kamis</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="friday" class="custom-control-input" id="edit-day-friday" {{ (is_array(old('working_days')) && in_array('friday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('friday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-friday">Jumat</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="saturday" class="custom-control-input" id="edit-day-saturday" {{ (is_array(old('working_days')) && in_array('saturday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('saturday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-saturday">Sabtu</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="sunday" class="custom-control-input" id="edit-day-sunday" {{ (is_array(old('working_days')) && in_array('sunday', old('working_days'))) || (!old('working_days') && is_array($workSchedule->working_days) && in_array('sunday', $workSchedule->working_days)) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="edit-day-sunday">Minggu</label>
+              </div>
+            </div>
+          </div>
+          <small class="text-muted">Kosongkan jika berlaku untuk semua hari</small>
+          @error('working_days')<div class="text-danger">{{ $message }}</div>@enderror
         </div>
       </div>
       <div class="card-footer text-right">

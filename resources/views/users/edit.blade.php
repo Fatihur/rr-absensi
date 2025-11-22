@@ -11,6 +11,20 @@
 </div>
 
 <div class="section-body">
+  @if ($errors->any())
+    <div class="alert alert-danger alert-dismissible show fade">
+      <div class="alert-title">Error!</div>
+      <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+          <li>{{ $error }}</li>
+        @endforeach
+      </ul>
+      <button class="close" data-dismiss="alert">
+        <span>&times;</span>
+      </button>
+    </div>
+  @endif
+
   <div class="card">
     <div class="card-header">
       <h4>Form Edit User</h4>
@@ -79,7 +93,7 @@
 
         <div class="form-group">
           <div class="custom-control custom-checkbox">
-            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" 
+            <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" value="1"
               {{ old('is_active', $user->is_active) ? 'checked' : '' }}>
             <label class="custom-control-label" for="is_active">Aktif</label>
           </div>

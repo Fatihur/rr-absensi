@@ -33,7 +33,6 @@ class UserController extends Controller
             'password' => 'required|min:8',
             'role_id' => 'required|exists:roles,id',
             'branch_id' => 'nullable|exists:branches,id',
-            'is_active' => 'boolean',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -70,7 +69,6 @@ class UserController extends Controller
             'password' => 'nullable|min:8',
             'role_id' => 'required|exists:roles,id',
             'branch_id' => 'nullable|exists:branches,id',
-            'is_active' => 'boolean',
         ]);
 
         if (!empty($validated['password'])) {

@@ -165,9 +165,8 @@
           <div class="card-header">
             <h4>Validasi Kehadiran</h4>
           </div>
-          <form action="{{ route('admin.attendances.monitor') }}" method="POST">
+          <form action="{{ route('admin.attendances.update-validation', $attendance->id) }}" method="POST">
             @csrf
-            <input type="hidden" name="attendance_id" value="{{ $attendance->id }}">
             <div class="card-body">
               <div class="form-group">
                 <label>Catatan Validasi</label>
@@ -177,11 +176,15 @@
                 <label>Status</label>
                 <select name="status" class="form-control">
                   <option value="valid">Valid - Terima kehadiran ini</option>
+                  <option value="late">Terlambat - Tandai sebagai terlambat</option>
                   <option value="problematic" selected>Bermasalah - Tetap tandai bermasalah</option>
                 </select>
               </div>
             </div>
             <div class="card-footer text-right">
+              <a href="{{ route('admin.attendances.validate') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Kembali
+              </a>
               <button type="submit" class="btn btn-primary">
                 <i class="fas fa-check"></i> Simpan Validasi
               </button>

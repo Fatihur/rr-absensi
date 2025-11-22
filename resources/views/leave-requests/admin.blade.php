@@ -2,6 +2,19 @@
 
 @section('title', 'Kelola Pengajuan Cuti/Izin')
 
+@push('styles')
+<style>
+  /* Remove modal backdrop completely */
+  .modal-backdrop {
+    display: none !important;
+  }
+  
+  .modal {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+</style>
+@endpush
+
 @section('content')
 <div class="section-header">
   <h1>Kelola Pengajuan Cuti/Izin</h1>
@@ -299,8 +312,30 @@
 <script src="{{ asset('stisla/assets/modules/datatables/datatables.min.js') }}"></script>
 <script src="{{ asset('stisla/assets/modules/datatables/DataTables-1.10.16/js/dataTables.bootstrap4.min.js') }}"></script>
 <script>
-  $("#table-1").dataTable({
-    "order": [[0, "desc"]]
+  $(document).ready(function() {
+    // Initialize DataTable
+    $("#table-1").dataTable({
+      "order": [[0, "desc"]]
+    });
+
+    // Remove any orphaned backdrop on page load
+    if ($('.modal.show').length === 0) {
+      $('.modal-backdrop').remove();
+      $('body').removeClass('modal-open').css('padding-right', '');
+    }
+
+    // Configure all modals to not use backdrop
+    $('.modal').on('show.bs.modal', function() {
+      $(this).data('bs.modal')._config.backdrop = false;
+    });
+
+    // Cleanup on modal hide
+    $('.modal').on('hidden.bs.modal', function() {
+      $('.modal-backdrop').remove();
+      if ($('.modal.show').length === 0) {
+        $('body').removeClass('modal-open').css('padding-right', '');
+      }
+    });
   });
 </script>
 @endpush

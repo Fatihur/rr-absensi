@@ -55,12 +55,14 @@ class MobileController extends Controller
             ->whereDate('date', $today)
             ->first();
 
+        // Get work schedule (priority: position specific > branch-wide)
         $workSchedule = $employee->branch->workSchedules()
-            ->where(function ($query) use ($employee) {
-                $query->whereNull('position_id')
-                    ->orWhere('position_id', $employee->position_id);
-            })
             ->where('is_active', true)
+            ->where(function ($query) use ($employee) {
+                $query->where('position_id', $employee->position_id)
+                    ->orWhereNull('position_id');
+            })
+            ->orderByRaw('position_id IS NULL ASC')
             ->first();
 
         return view('mobile.attendance', [
@@ -183,6 +185,67 @@ class MobileController extends Controller
         return response()->json([
             'message' => 'Check-out berhasil!',
             'attendance' => $attendance,
+        ]);
+    }
+
+    public function breakStart(Request $request)
+    {
+        $employee = Auth::user()->employee;
+        $today = Carbon::today();
+
+        $attendance = Attendance::where('employee_id', $employee->id)
+            ->whereDate('date', $today)
+            ->first();
+
+        if (!$attendance || !$attendance->check_in) {
+            return response()->json(['message' => 'Anda belum melakukan check-in'], 422);
+        }
+
+        if ($attendance->check_out) {
+            return response()->json(['message' => 'Anda sudah check-out'], 422);
+        }
+
+        if ($attendance->break_start) {
+            return response()->json(['message' => 'Anda sudah memulai istirahat'], 422);
+        }
+
+        $attendance->update(['break_start' => now()]);
+
+        return response()->json([
+            'message' => 'Istirahat dimulai!',
+            'break_start' => $attendance->break_start->format('H:i:s'),
+        ]);
+    }
+
+    public function breakEnd(Request $request)
+    {
+        $employee = Auth::user()->employee;
+        $today = Carbon::today();
+
+        $attendance = Attendance::where('employee_id', $employee->id)
+            ->whereDate('date', $today)
+            ->first();
+
+        if (!$attendance || !$attendance->check_in) {
+            return response()->json(['message' => 'Anda belum melakukan check-in'], 422);
+        }
+
+        if (!$attendance->break_start) {
+            return response()->json(['message' => 'Anda belum memulai istirahat'], 422);
+        }
+
+        if ($attendance->break_end) {
+            return response()->json(['message' => 'Anda sudah mengakhiri istirahat'], 422);
+        }
+
+        $attendance->update(['break_end' => now()]);
+
+        $breakDuration = $attendance->break_start->diffInMinutes($attendance->break_end);
+
+        return response()->json([
+            'message' => 'Istirahat selesai! Durasi: ' . $breakDuration . ' menit',
+            'break_end' => $attendance->break_end->format('H:i:s'),
+            'duration' => $breakDuration,
         ]);
     }
 

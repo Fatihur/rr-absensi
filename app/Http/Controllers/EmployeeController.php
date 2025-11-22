@@ -112,7 +112,6 @@ class EmployeeController extends Controller
             'position_id' => 'required|exists:positions,id',
             'join_date' => 'required|date',
             'face_photo' => 'nullable|image|max:2048',
-            'is_active' => 'boolean',
         ]);
 
         $userData = [

@@ -1,0 +1,192 @@
+<?php
+
+namespace App\Livewire;
+
+use Livewire\Component;
+use Carbon\Carbon;
+
+class AttendanceCheckIn extends Component
+{
+    public $latitude;
+    public $longitude;
+    public $attendance;
+    public $workSchedule;
+    public $branch;
+    public $distance;
+    public $isInRadius = false;
+
+    protected $listeners = ['locationUpdated', 'photoSubmitted'];
+
+    public function mount()
+    {
+        try {
+            $this->loadData();
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error loading data: ' . $e->getMessage());
+            \Log::error('AttendanceCheckIn mount error: ' . $e->getMessage());
+        }
+    }
+
+    public function loadData()
+    {
+        $user = auth()->user();
+        
+        if (!$user) {
+            throw new \Exception('User not authenticated');
+        }
+        
+        $this->branch = $user->branch;
+        
+        if (!$this->branch) {
+            session()->flash('error', 'Branch tidak ditemukan untuk user Anda');
+            return;
+        }
+        
+        $employee = $user->employee;
+        if ($employee) {
+            $this->workSchedule = $employee->position?->workSchedule;
+            $this->attendance = $employee->attendances()
+                ->whereDate('date', today())
+                ->first();
+        }
+    }
+
+    public function locationUpdated($latitude, $longitude, $distance)
+    {
+        $this->latitude = $latitude;
+        $this->longitude = $longitude;
+        $this->distance = $distance;
+        $this->isInRadius = $distance <= $this->branch->radius;
+    }
+
+    public function breakStart()
+    {
+        try {
+            if (!$this->attendance || !$this->attendance->check_in) {
+                session()->flash('error', 'Anda belum check-in');
+                return;
+            }
+
+            if ($this->attendance->break_start) {
+                session()->flash('error', 'Anda sudah memulai istirahat');
+                return;
+            }
+
+            $this->attendance->update(['break_start' => now()]);
+            session()->flash('message', 'Selamat istirahat!');
+            $this->loadData();
+        } catch (\Exception $e) {
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function breakEnd()
+    {
+        try {
+            if (!$this->attendance || !$this->attendance->break_start) {
+                session()->flash('error', 'Anda belum memulai istirahat');
+                return;
+            }
+
+            if ($this->attendance->break_end) {
+                session()->flash('error', 'Anda sudah mengakhiri istirahat');
+                return;
+            }
+
+            $this->attendance->update(['break_end' => now()]);
+            session()->flash('message', 'Selamat bekerja kembali!');
+            $this->loadData();
+        } catch (\Exception $e) {
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function photoSubmitted($photoData, $action)
+    {
+        try {
+            if (!$this->latitude || !$this->longitude) {
+                session()->flash('error', 'Lokasi belum terdeteksi');
+                return;
+            }
+
+            // Decode base64 photo
+            $photoData = str_replace('data:image/jpeg;base64,', '', $photoData);
+            $photoData = str_replace(' ', '+', $photoData);
+            $photo = base64_decode($photoData);
+
+            // Save photo
+            $filename = 'attendance_' . auth()->id() . '_' . time() . '.jpg';
+            $path = 'attendance_photos/' . $filename;
+            \Storage::disk('public')->put($path, $photo);
+
+            if ($action === 'check-in') {
+                $this->processCheckIn($path);
+            } else {
+                $this->processCheckOut($path);
+            }
+
+            $this->dispatch('closeModal');
+            $this->loadData();
+        } catch (\Exception $e) {
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    protected function processCheckIn($photoPath)
+    {
+        $employee = auth()->user()->employee;
+        
+        if (!$employee) {
+            session()->flash('error', 'Data karyawan tidak ditemukan');
+            return;
+        }
+        
+        // Calculate status
+        $checkInTime = now();
+        $scheduledTime = Carbon::parse($this->workSchedule->check_in_time);
+        $lateTolerance = $this->workSchedule->late_tolerance ?? 0;
+        
+        $status = 'valid';
+        if ($checkInTime->greaterThan($scheduledTime->addMinutes($lateTolerance))) {
+            $status = 'late';
+        }
+        
+        if (!$this->isInRadius) {
+            $status = 'invalid';
+        }
+
+        $employee->attendances()->create([
+            'date' => today(),
+            'check_in' => $checkInTime,
+            'check_in_photo' => $photoPath,
+            'check_in_lat' => $this->latitude,
+            'check_in_lng' => $this->longitude,
+            'status' => $status,
+        ]);
+
+        session()->flash('message', 'Check-in berhasil!');
+    }
+
+    protected function processCheckOut($photoPath)
+    {
+        if (!$this->attendance) {
+            session()->flash('error', 'Anda belum check-in hari ini');
+            return;
+        }
+
+        $this->attendance->update([
+            'check_out' => now(),
+            'check_out_photo' => $photoPath,
+            'check_out_lat' => $this->latitude,
+            'check_out_lng' => $this->longitude,
+        ]);
+
+        session()->flash('message', 'Check-out berhasil!');
+    }
+
+    public function render()
+    {
+        return view('livewire.attendance-check-in')
+            ->layout('layouts.app', ['title' => 'Absensi']);
+    }
+}

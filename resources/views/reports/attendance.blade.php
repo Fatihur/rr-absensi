@@ -262,12 +262,24 @@
     "order": [[0, "desc"]]
   });
 
+  function showAlert(message, type = 'info') {
+    const alertHtml = `
+      <div class="alert alert-${type} alert-dismissible show fade">
+        <div class="alert-body">
+          <button class="close" data-dismiss="alert"><span>&times;</span></button>
+          ${message}
+        </div>
+      </div>
+    `;
+    $('.section-body').prepend(alertHtml);
+  }
+
   function exportExcel() {
-    alert('Fitur export Excel akan segera tersedia.\n\nUntuk mengaktifkan, jalankan:\ncomposer require maatwebsite/excel');
+    showAlert('Fitur export Excel akan segera tersedia.<br><br>Untuk mengaktifkan, jalankan:<br><code>composer require maatwebsite/excel</code>', 'info');
   }
 
   function exportPDF() {
-    alert('Fitur export PDF akan segera tersedia.\n\nUntuk mengaktifkan, jalankan:\ncomposer require barryvdh/laravel-dompdf');
+    showAlert('Fitur export PDF akan segera tersedia.<br><br>Untuk mengaktifkan, jalankan:<br><code>composer require barryvdh/laravel-dompdf</code>', 'info');
   }
 </script>
 @endpush

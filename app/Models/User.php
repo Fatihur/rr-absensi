@@ -65,6 +65,16 @@ class User extends Authenticatable
         return $this->hasOne(Employee::class);
     }
 
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    public function position()
+    {
+        return $this->hasOneThrough(Position::class, Employee::class, 'user_id', 'id', 'id', 'position_id');
+    }
+
     public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);

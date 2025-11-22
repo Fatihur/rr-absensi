@@ -29,6 +29,7 @@
               <th>Posisi</th>
               <th>Jam Masuk</th>
               <th>Jam Pulang</th>
+              <th>Hari Kerja</th>
               <th>Toleransi</th>
               <th>Aksi</th>
             </tr>
@@ -41,6 +42,25 @@
                 <td>{{ $schedule->position ? $schedule->position->name : 'Semua Posisi' }}</td>
                 <td>{{ Carbon\Carbon::parse($schedule->check_in_time)->format('H:i') }}</td>
                 <td>{{ Carbon\Carbon::parse($schedule->check_out_time)->format('H:i') }}</td>
+                <td>
+                  @if($schedule->working_days && count($schedule->working_days) > 0)
+                    @php
+                      $dayNames = [
+                        'monday' => 'Sen',
+                        'tuesday' => 'Sel',
+                        'wednesday' => 'Rab',
+                        'thursday' => 'Kam',
+                        'friday' => 'Jum',
+                        'saturday' => 'Sab',
+                        'sunday' => 'Min'
+                      ];
+                      $days = array_map(fn($day) => $dayNames[$day] ?? $day, $schedule->working_days);
+                    @endphp
+                    <small>{{ implode(', ', $days) }}</small>
+                  @else
+                    <small class="text-muted">Semua Hari</small>
+                  @endif
+                </td>
                 <td>{{ $schedule->late_tolerance }} menit</td>
                 <td>
                   <a href="{{ route('admin.work-schedules.edit', $schedule) }}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
@@ -52,7 +72,7 @@
                 </td>
               </tr>
             @empty
-              <tr><td colspan="7" class="text-center">Belum ada data jadwal kerja</td></tr>
+              <tr><td colspan="8" class="text-center">Belum ada data jadwal kerja</td></tr>
             @endforelse
           </tbody>
         </table>

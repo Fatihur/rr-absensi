@@ -64,6 +64,9 @@
 @endpush
 
 @section('content')
+<!-- Alert Container -->
+<div id="alertContainer"></div>
+
 <!-- Location Info -->
 <div class="mobile-card">
   <div class="mobile-card-title">
@@ -114,12 +117,40 @@
     </div>
 
     @if(!$attendance->check_out)
+      <!-- Break Time Buttons -->
+      @if($workSchedule && $workSchedule->break_start && $workSchedule->break_end)
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          @if(!$attendance->break_start)
+            <button type="button" class="btn btn-mobile btn-mobile-warning" id="breakStartBtn" style="flex: 1;">
+              <i class="fas fa-coffee"></i> Mulai Istirahat
+            </button>
+          @elseif($attendance->break_start && !$attendance->break_end)
+            <div style="flex: 1; padding: 12px; background: #d1ecf1; border-radius: 10px; text-align: center;">
+              <small style="color: #0c5460;"><strong>Istirahat Dimulai</strong><br>{{ $attendance->break_start->format('H:i:s') }}</small>
+            </div>
+            <button type="button" class="btn btn-mobile btn-mobile-success" id="breakEndBtn" style="flex: 1;">
+              <i class="fas fa-play"></i> Kembali Bekerja
+            </button>
+          @else
+            <div style="flex: 1; padding: 12px; background: #d4edda; border-radius: 10px; text-align: center;">
+              <small style="color: #155724;">
+                <strong>Istirahat Selesai</strong><br>
+                {{ $attendance->break_start->format('H:i') }} - {{ $attendance->break_end->format('H:i') }}
+              </small>
+            </div>
+          @endif
+        </div>
+      @endif
+
       <button type="button" class="btn btn-mobile btn-mobile-danger" id="checkOutBtn">
         <i class="fas fa-sign-out-alt"></i> Check-Out Sekarang
       </button>
     @else
       <div class="alert alert-info alert-mobile">
         <strong>Check-out:</strong> {{ $attendance->check_out->format('H:i:s') }}<br>
+        @if($attendance->break_start && $attendance->break_end)
+          <strong>Istirahat:</strong> {{ $attendance->break_start->format('H:i') }} - {{ $attendance->break_end->format('H:i') }}<br>
+        @endif
         <small>Anda sudah menyelesaikan absensi hari ini.</small>
       </div>
     @endif
@@ -138,6 +169,9 @@
 <div class="mobile-card">
   <div class="mobile-card-title">
     <i class="fas fa-clock"></i> Jadwal Kerja
+    @if($workSchedule->position_id)
+      <span class="badge badge-mobile" style="background: #667eea; color: white;">{{ $workSchedule->position->name }}</span>
+    @endif
   </div>
   
   <div style="display: flex; gap: 10px;">
@@ -155,8 +189,25 @@
     </div>
   </div>
   
+  @if($workSchedule->break_start && $workSchedule->break_end)
+  <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 10px; text-align: center;">
+    <div style="font-size: 12px; color: #856404; margin-bottom: 3px;">
+      <i class="fas fa-coffee"></i> Jam Istirahat
+    </div>
+    <div style="font-size: 16px; font-weight: bold; color: #856404;">
+      {{ Carbon\Carbon::parse($workSchedule->break_start)->format('H:i') }} - {{ Carbon\Carbon::parse($workSchedule->break_end)->format('H:i') }}
+    </div>
+  </div>
+  @endif
+  
   <div style="margin-top: 10px; text-align: center; font-size: 13px; color: #6c757d;">
-    <i class="fas fa-info-circle"></i> Toleransi keterlambatan: {{ $workSchedule->late_tolerance }} menit
+    <i class="fas fa-info-circle"></i> Toleransi: {{ $workSchedule->late_tolerance }} menit
+  </div>
+</div>
+@else
+<div class="mobile-card">
+  <div class="alert alert-warning alert-mobile">
+    <i class="fas fa-exclamation-triangle"></i> Jadwal kerja belum diatur
   </div>
 </div>
 @endif
@@ -278,18 +329,75 @@
     return R * c;
   }
 
-  $('#checkInBtn').on('click', function() {
-    if (!$('#latitude').val()) {
-      alert('Tunggu hingga lokasi terdeteksi');
-      return;
+  function showAlert(message, type = 'info') {
+    const alertHtml = `
+      <div class="alert alert-${type} alert-dismissible show fade alert-mobile" style="margin: 15px;">
+        <div class="alert-body">
+          <button class="close" data-dismiss="alert"><span>&times;</span></button>
+          ${message}
+        </div>
+      </div>
+    `;
+    $('#alertContainer').html(alertHtml);
+    setTimeout(() => {
+      $('.alert').fadeOut(() => $('.alert').remove());
+    }, 5000);
+  }
+
+  // Event Handlers - Wrap in document ready
+  $(document).ready(function() {
+    $('#checkInBtn').on('click', function() {
+      if (!$('#latitude').val()) {
+        showAlert('Tunggu hingga lokasi terdeteksi', 'warning');
+        return;
+      }
+      currentAction = 'check-in';
+      openCamera();
+    });
+
+  $('#breakStartBtn').on('click', function() {
+    if (confirm('Yakin ingin mulai istirahat sekarang?')) {
+      $.ajax({
+        url: '{{ route("mobile.attendance.break-start") }}',
+        method: 'POST',
+        data: { _token: '{{ csrf_token() }}' },
+        success: function(response) {
+          showAlert(response.message, 'success');
+          setTimeout(() => location.reload(), 1500);
+        },
+        error: function(xhr) {
+          var message = xhr.responseJSON && xhr.responseJSON.message 
+            ? xhr.responseJSON.message 
+            : 'Terjadi kesalahan';
+          showAlert(message, 'danger');
+        }
+      });
     }
-    currentAction = 'check-in';
-    openCamera();
+  });
+
+  $('#breakEndBtn').on('click', function() {
+    if (confirm('Istirahat selesai dan kembali bekerja?')) {
+      $.ajax({
+        url: '{{ route("mobile.attendance.break-end") }}',
+        method: 'POST',
+        data: { _token: '{{ csrf_token() }}' },
+        success: function(response) {
+          showAlert(response.message, 'success');
+          setTimeout(() => location.reload(), 1500);
+        },
+        error: function(xhr) {
+          var message = xhr.responseJSON && xhr.responseJSON.message 
+            ? xhr.responseJSON.message 
+            : 'Terjadi kesalahan';
+          showAlert(message, 'danger');
+        }
+      });
+    }
   });
 
   $('#checkOutBtn').on('click', function() {
     if (!$('#latitude').val()) {
-      alert('Tunggu hingga lokasi terdeteksi');
+      showAlert('Tunggu hingga lokasi terdeteksi', 'warning');
       return;
     }
     currentAction = 'check-out';
@@ -308,7 +416,7 @@
         $('#submitBtn').hide();
       })
       .catch(function(err) {
-        alert('Error: ' + err.message);
+        showAlert('Error: ' + err.message, 'danger');
         $('#cameraModal').removeClass('show');
       });
   }
@@ -350,7 +458,7 @@
 
   $('#submitBtn').on('click', function() {
     if (!capturedBlob) {
-      alert('Silakan ambil foto terlebih dahulu');
+      showAlert('Silakan ambil foto terlebih dahulu', 'warning');
       return;
     }
 
@@ -373,17 +481,17 @@
       contentType: false,
       success: function(response) {
         hideLoading();
-        alert(response.message);
-        location.reload();
+        showAlert(response.message, 'success');
+        setTimeout(() => location.reload(), 1500);
       },
       error: function(xhr) {
         hideLoading();
         var message = xhr.responseJSON && xhr.responseJSON.message 
           ? xhr.responseJSON.message 
           : 'Terjadi kesalahan';
-        alert(message);
+        showAlert(message, 'danger');
       }
     });
-  });
+  }); // End document.ready
 </script>
 @endpush

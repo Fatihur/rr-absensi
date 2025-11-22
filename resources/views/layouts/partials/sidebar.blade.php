@@ -25,7 +25,10 @@
       @endif
 
       @if(Auth::user()->isAdminCabang())
+        <li class="menu-header">Data Karyawan</li>
+        <li><a class="nav-link" href="{{ route('admin.employees.index') }}"><i class="fas fa-users"></i> <span>Daftar Karyawan</span></a></li>
         <li class="menu-header">Pengaturan Cabang</li>
+        <li><a class="nav-link" href="{{ route('admin.branch.location') }}"><i class="fas fa-map-marker-alt"></i> <span>Lokasi Kantor</span></a></li>
         <li><a class="nav-link" href="{{ route('admin.work-schedules.index') }}"><i class="fas fa-clock"></i> <span>Jam Kerja</span></a></li>
         <li><a class="nav-link" href="{{ route('admin.holidays.index') }}"><i class="fas fa-calendar"></i> <span>Hari Libur</span></a></li>
         <li class="menu-header">Monitoring</li>

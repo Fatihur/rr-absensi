@@ -1,0 +1,579 @@
+<div>
+  @push('styles')
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 300px; margin-bottom: 20px; }
+    #video, #canvas { width: 100%; max-width: 640px; }
+    #canvas { display: none; }
+    .camera-container { position: relative; }
+    .capture-btn { margin-top: 10px; }
+    
+    .modal-backdrop {
+      display: none !important;
+    }
+    
+    .modal {
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+  </style>
+  @endpush
+
+  <div class="section-header">
+    <h1>Absensi Hari Ini</h1>
+  </div>
+
+  <!-- Flash Messages -->
+  @if (session()->has('message'))
+    <div class="alert alert-success alert-dismissible show fade" style="margin: 0 15px 15px 15px;">
+      <div class="alert-body">
+        <button class="close" data-dismiss="alert"><span>&times;</span></button>
+        {{ session('message') }}
+      </div>
+    </div>
+  @endif
+
+  @if (session()->has('error'))
+    <div class="alert alert-danger alert-dismissible show fade" style="margin: 0 15px 15px 15px;">
+      <div class="alert-body">
+        <button class="close" data-dismiss="alert"><span>&times;</span></button>
+        {{ session('error') }}
+      </div>
+    </div>
+  @endif
+
+  <div id="alertContainer"></div>
+
+  <div class="section-body">
+    <div class="row">
+      <div class="col-12 col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h4>Status Absensi</h4>
+          </div>
+          <div class="card-body">
+            @if($attendance && $attendance->check_in)
+              <div class="alert alert-success">
+                <strong>Check-in:</strong> {{ $attendance->check_in->format('H:i:s') }}<br>
+                <strong>Status:</strong> 
+                @if($attendance->status === 'valid')
+                  <span class="badge badge-success">Valid</span>
+                @elseif($attendance->status === 'late')
+                  <span class="badge badge-warning">Terlambat</span>
+                @else
+                  <span class="badge badge-danger">Bermasalah</span>
+                @endif
+              </div>
+
+              @if(!$attendance->check_out)
+                <!-- Break Time Buttons -->
+                @if($workSchedule && $workSchedule->break_start && $workSchedule->break_end)
+                  <div class="row mb-3">
+                    <div class="col-6">
+                      @if(!$attendance->break_start)
+                        <button type="button" wire:click="breakStart" wire:loading.attr="disabled" class="btn btn-warning btn-lg btn-block">
+                          <span wire:loading.remove wire:target="breakStart">
+                            <i class="fas fa-coffee"></i> Mulai Istirahat
+                          </span>
+                          <span wire:loading wire:target="breakStart">
+                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                          </span>
+                        </button>
+                      @elseif(!$attendance->break_end)
+                        <div class="alert alert-info mb-0">
+                          <small><strong>Istirahat:</strong><br>{{ $attendance->break_start->format('H:i:s') }}</small>
+                        </div>
+                      @else
+                        <div class="alert alert-success mb-0">
+                          <small>
+                            <strong>Istirahat:</strong><br>
+                            {{ $attendance->break_start->format('H:i') }} - {{ $attendance->break_end->format('H:i') }}
+                          </small>
+                        </div>
+                      @endif
+                    </div>
+                    <div class="col-6">
+                      @if($attendance->break_start && !$attendance->break_end)
+                        <button type="button" wire:click="breakEnd" wire:loading.attr="disabled" class="btn btn-success btn-lg btn-block">
+                          <span wire:loading.remove wire:target="breakEnd">
+                            <i class="fas fa-play"></i> Kembali Bekerja
+                          </span>
+                          <span wire:loading wire:target="breakEnd">
+                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                          </span>
+                        </button>
+                      @endif
+                    </div>
+                  </div>
+                @endif
+
+                <!-- Check-out Button -->
+                <button type="button" class="btn btn-danger btn-lg btn-block" id="checkOutBtn">
+                  <i class="fas fa-sign-out-alt"></i> Check-Out
+                </button>
+              @else
+                <div class="alert alert-info">
+                  <strong>Check-out:</strong> {{ $attendance->check_out->format('H:i:s') }}<br>
+                  @if($attendance->break_start && $attendance->break_end)
+                    <strong>Istirahat:</strong> {{ $attendance->break_start->format('H:i') }} - {{ $attendance->break_end->format('H:i') }}<br>
+                  @endif
+                  Anda sudah menyelesaikan absensi hari ini.
+                </div>
+              @endif
+            @else
+              <div class="alert alert-warning">
+                Anda belum melakukan check-in hari ini.
+              </div>
+              <button type="button" class="btn btn-primary btn-lg btn-block" id="checkInBtn">
+                <i class="fas fa-sign-in-alt"></i> Check-In
+              </button>
+            @endif
+
+            <hr>
+
+            @if($workSchedule)
+              <div>
+                <strong>Jadwal Kerja:</strong>
+                @if($workSchedule->position_id)
+                  <span class="badge badge-info">{{ $workSchedule->position->name }}</span>
+                @else
+                  <span class="badge badge-secondary">Umum</span>
+                @endif
+                <br>
+                <small class="text-muted">
+                  <i class="fas fa-sign-in-alt"></i> Masuk: <strong>{{ Carbon\Carbon::parse($workSchedule->check_in_time)->format('H:i') }}</strong><br>
+                  <i class="fas fa-sign-out-alt"></i> Pulang: <strong>{{ Carbon\Carbon::parse($workSchedule->check_out_time)->format('H:i') }}</strong><br>
+                  @if($workSchedule->break_start && $workSchedule->break_end)
+                    <i class="fas fa-coffee"></i> Istirahat: <strong>{{ Carbon\Carbon::parse($workSchedule->break_start)->format('H:i') }} - {{ Carbon\Carbon::parse($workSchedule->break_end)->format('H:i') }}</strong><br>
+                  @endif
+                  <i class="fas fa-hourglass-half"></i> Toleransi: <strong>{{ $workSchedule->late_tolerance }} menit</strong>
+                </small>
+              </div>
+            @else
+              <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Jadwal kerja belum diatur untuk posisi Anda
+              </div>
+            @endif
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h4>Lokasi Anda</h4>
+          </div>
+          <div class="card-body">
+            <div id="map"></div>
+            <div class="alert alert-info" id="locationInfo">
+              <i class="fas fa-spinner fa-spin"></i> Mendapatkan lokasi Anda...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Camera -->
+    <div class="modal fade" id="cameraModal" tabindex="-1" role="dialog" wire:ignore.self>
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Ambil Foto Absensi</h5>
+            <button type="button" class="close" data-dismiss="modal">
+              <span>&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="camera-container text-center" style="position: relative;">
+              <video id="video" autoplay style="width: 100%; max-width: 640px; transform: scaleX(-1); border-radius: 8px;"></video>
+              <canvas id="canvas" style="display: none; width: 100%; max-width: 640px; transform: scaleX(-1); border-radius: 8px;"></canvas>
+              <canvas id="overlay" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%) scaleX(-1); pointer-events: none;"></canvas>
+            </div>
+            
+            <!-- Face Detection Status -->
+            <div class="mt-3">
+              <div class="alert alert-info" id="detectionStatus">
+                <i class="fas fa-spinner fa-spin"></i> Memuat model deteksi wajah...
+              </div>
+              
+              <!-- Detection Indicators -->
+              <div class="row text-center mt-2">
+                <div class="col-6">
+                  <div class="detection-indicator" id="faceIndicator">
+                    <i class="fas fa-user fa-2x text-muted"></i>
+                    <p class="mb-0 mt-2">Wajah</p>
+                    <small class="text-muted">Belum terdeteksi</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="detection-indicator" id="smileIndicator">
+                    <i class="fas fa-smile fa-2x text-muted"></i>
+                    <p class="mb-0 mt-2">Senyum</p>
+                    <small class="text-muted">Belum terdeteksi</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-primary" id="captureBtn" disabled>
+              <i class="fas fa-camera"></i> Ambil Foto
+            </button>
+            <button type="button" class="btn btn-success" id="submitBtn" style="display:none;">
+              <i class="fas fa-check"></i> Submit Absensi
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @push('scripts')
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script>
+    var map, marker;
+    var branchLat = {{ $branch->latitude ?? -6.2088 }};
+    var branchLng = {{ $branch->longitude ?? 106.8456 }};
+    var branchRadius = {{ $branch->radius }};
+    var currentAction = '';
+    var capturedPhotoData = null;
+    var userLat, userLng;
+
+    // Initialize map
+    map = L.map('map').setView([branchLat, branchLng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Add branch marker
+    var branchMarker = L.marker([branchLat, branchLng], {
+      icon: L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      })
+    }).addTo(map);
+    branchMarker.bindPopup('<strong>{{ $branch->name }}</strong>');
+
+    // Add radius circle
+    L.circle([branchLat, branchLng], {
+      color: 'blue',
+      fillColor: '#30f',
+      fillOpacity: 0.2,
+      radius: branchRadius
+    }).addTo(map);
+
+    // Get current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        userLat = position.coords.latitude;
+        userLng = position.coords.longitude;
+
+        // Add user marker
+        marker = L.marker([userLat, userLng], {
+          icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          })
+        }).addTo(map);
+        marker.bindPopup('<strong>Lokasi Anda</strong>');
+
+        map.setView([userLat, userLng], 16);
+
+        // Calculate distance
+        var distance = calculateDistance(userLat, userLng, branchLat, branchLng);
+        
+        // Dispatch to Livewire
+        @this.dispatch('locationUpdated', { 
+          latitude: userLat, 
+          longitude: userLng, 
+          distance: distance 
+        });
+
+        if (distance <= branchRadius) {
+          $('#locationInfo').removeClass('alert-info alert-danger').addClass('alert-success');
+          $('#locationInfo').html('<i class="fas fa-check-circle"></i> Anda berada dalam radius kantor (' + Math.round(distance) + 'm)');
+        } else {
+          $('#locationInfo').removeClass('alert-info alert-success').addClass('alert-danger');
+          $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Anda berada di luar radius kantor (' + Math.round(distance) + 'm). Absensi akan ditandai bermasalah.');
+        }
+      }, function(error) {
+        $('#locationInfo').removeClass('alert-info').addClass('alert-danger');
+        $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Gagal mendapatkan lokasi: ' + error.message);
+      });
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      var R = 6371000; // meters
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLon = (lon2 - lon1) * Math.PI / 180;
+      var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function showAlert(message, type = 'info') {
+      const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible show fade" style="margin: 0 15px 15px 15px;">
+          <div class="alert-body">
+            <button class="close" data-dismiss="alert"><span>&times;</span></button>
+            ${message}
+          </div>
+        </div>
+      `;
+      $('#alertContainer').html(alertHtml);
+      setTimeout(() => {
+        $('.alert').fadeOut(() => $('.alert').remove());
+      }, 5000);
+    }
+
+    // Event Handlers
+    $(document).ready(function() {
+      if ($('.modal.show').length === 0) {
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css('padding-right', '');
+      }
+
+      $('#checkInBtn').on('click', function() {
+        if (!userLat) {
+          showAlert('Tunggu hingga lokasi Anda terdeteksi', 'warning');
+          return;
+        }
+        currentAction = 'check-in';
+        $('#cameraModal').modal({backdrop: false, show: true});
+        startCamera();
+      });
+
+      $('#checkOutBtn').on('click', function() {
+        if (!userLat) {
+          showAlert('Tunggu hingga lokasi Anda terdeteksi', 'warning');
+          return;
+        }
+        currentAction = 'check-out';
+        $('#cameraModal').modal({backdrop: false, show: true});
+        startCamera();
+      });
+
+      // Listen for closeModal event from Livewire
+      window.addEventListener('closeModal', () => {
+        $('#cameraModal').modal('hide');
+        setTimeout(() => location.reload(), 1000);
+      });
+    });
+
+    // Camera & Face Detection
+    var video = document.getElementById('video');
+    var canvas = document.getElementById('canvas');
+    var overlay = document.getElementById('overlay');
+    var stream;
+    var modelsLoaded = false;
+    var detectionInterval;
+    var faceDetected = false;
+    var smileDetected = false;
+
+    async function loadModels() {
+      try {
+        $('#detectionStatus').html('<i class="fas fa-spinner fa-spin"></i> Memuat model deteksi wajah...');
+        
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+        
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        ]);
+        
+        modelsLoaded = true;
+        $('#detectionStatus').html('<i class="fas fa-check-circle text-success"></i> Model siap! Arahkan wajah Anda ke kamera dan tersenyum.');
+      } catch (error) {
+        console.error('Error loading models:', error);
+        $('#detectionStatus').html('<i class="fas fa-exclamation-triangle text-warning"></i> Deteksi wajah tidak tersedia, Anda masih bisa mengambil foto.');
+        $('#captureBtn').prop('disabled', false);
+      }
+    }
+
+    async function detectFaceAndSmile() {
+      if (!modelsLoaded || video.paused || video.ended) return;
+
+      try {
+        const detections = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceExpressions();
+
+        const displaySize = { width: video.videoWidth, height: video.videoHeight };
+        overlay.width = displaySize.width;
+        overlay.height = displaySize.height;
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        if (detections) {
+          faceDetected = true;
+          
+          const resizedDetections = faceapi.resizeResults(detections, displaySize);
+          ctx.strokeStyle = '#28a745';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(
+            resizedDetections.detection.box.x,
+            resizedDetections.detection.box.y,
+            resizedDetections.detection.box.width,
+            resizedDetections.detection.box.height
+          );
+
+          const expressions = detections.expressions;
+          const happyScore = expressions.happy;
+          smileDetected = happyScore > 0.6;
+
+          updateIndicators(true, smileDetected, happyScore);
+
+          if (faceDetected && smileDetected) {
+            $('#captureBtn').prop('disabled', false);
+          } else {
+            $('#captureBtn').prop('disabled', true);
+          }
+        } else {
+          faceDetected = false;
+          smileDetected = false;
+          updateIndicators(false, false, 0);
+          $('#captureBtn').prop('disabled', true);
+        }
+      } catch (error) {
+        console.error('Detection error:', error);
+      }
+    }
+
+    function updateIndicators(faceFound, smileFound, happyScore) {
+      if (faceFound) {
+        $('#faceIndicator i').removeClass('text-muted').addClass('text-success');
+        $('#faceIndicator small').text('Terdeteksi ✓').removeClass('text-muted').addClass('text-success');
+      } else {
+        $('#faceIndicator i').removeClass('text-success').addClass('text-muted');
+        $('#faceIndicator small').text('Belum terdeteksi').removeClass('text-success').addClass('text-muted');
+      }
+
+      if (smileFound) {
+        $('#smileIndicator i').removeClass('text-muted').addClass('text-success');
+        $('#smileIndicator small').text('Tersenyum ✓ (' + Math.round(happyScore * 100) + '%)').removeClass('text-muted').addClass('text-success');
+      } else if (faceFound) {
+        $('#smileIndicator i').removeClass('text-success').addClass('text-warning');
+        $('#smileIndicator small').text('Silakan senyum (' + Math.round(happyScore * 100) + '%)').removeClass('text-muted text-success').addClass('text-warning');
+      } else {
+        $('#smileIndicator i').removeClass('text-success text-warning').addClass('text-muted');
+        $('#smileIndicator small').text('Belum terdeteksi').removeClass('text-success text-warning').addClass('text-muted');
+      }
+    }
+
+    function startCamera() {
+      navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: 640, 
+          height: 480,
+          facingMode: 'user'
+        } 
+      })
+        .then(function(s) {
+          stream = s;
+          video.srcObject = stream;
+          video.style.display = 'block';
+          canvas.style.display = 'none';
+          $('#captureBtn').show().prop('disabled', true);
+          $('#submitBtn').hide();
+
+          video.addEventListener('loadeddata', () => {
+            if (!modelsLoaded) {
+              loadModels().then(() => {
+                detectionInterval = setInterval(detectFaceAndSmile, 100);
+              });
+            } else {
+              detectionInterval = setInterval(detectFaceAndSmile, 100);
+            }
+          });
+        })
+        .catch(function(err) {
+          showAlert('Error accessing camera: ' + err.message, 'danger');
+        });
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (detectionInterval) {
+        clearInterval(detectionInterval);
+      }
+      faceDetected = false;
+      smileDetected = false;
+      updateIndicators(false, false, 0);
+    }
+
+    $('#captureBtn').on('click', function() {
+      if (detectionInterval) {
+        clearInterval(detectionInterval);
+      }
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      
+      video.style.display = 'none';
+      overlay.style.display = 'none';
+      canvas.style.display = 'block';
+      $('#captureBtn').hide();
+      $('#submitBtn').show();
+      $('#detectionStatus').hide();
+      $('.detection-indicator').hide();
+
+      capturedPhotoData = canvas.toDataURL('image/jpeg', 0.8);
+      stopCamera();
+    });
+
+    $('#submitBtn').on('click', function() {
+      if (!capturedPhotoData) {
+        showAlert('Silakan ambil foto terlebih dahulu', 'warning');
+        return;
+      }
+
+      $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Mengirim...');
+
+      // Send to Livewire
+      @this.dispatch('photoSubmitted', { 
+        photoData: capturedPhotoData, 
+        action: currentAction 
+      });
+    });
+
+    $('#cameraModal').on('hidden.bs.modal', function() {
+      stopCamera();
+      video.style.display = 'block';
+      canvas.style.display = 'none';
+      overlay.style.display = 'block';
+      $('#captureBtn').show().prop('disabled', true);
+      $('#submitBtn').hide().prop('disabled', false).html('<i class="fas fa-check"></i> Submit Absensi');
+      $('#detectionStatus').show();
+      $('.detection-indicator').show();
+      updateIndicators(false, false, 0);
+      capturedPhotoData = null;
+    });
+
+    $(window).on('beforeunload', function() {
+      stopCamera();
+    });
+  </script>
+  @endpush
+</div>

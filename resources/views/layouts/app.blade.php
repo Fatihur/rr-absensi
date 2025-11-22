@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@yield('title') - {{ config('app.name') }}</title>
+  <title>{{ $title ?? '' }}@yield('title') - {{ config('app.name') }}</title>
 
   <link rel="stylesheet" href="{{ asset('stisla/assets/modules/bootstrap/css/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ asset('stisla/assets/modules/fontawesome/css/all.min.css') }}">
@@ -13,6 +13,8 @@
 
   <link rel="stylesheet" href="{{ asset('stisla/assets/css/style.css') }}">
   <link rel="stylesheet" href="{{ asset('stisla/assets/css/components.css') }}">
+  
+  @livewireStyles
 </head>
 
 <body>
@@ -27,6 +29,7 @@
       <div class="main-content">
         <section class="section">
           @yield('content')
+          {{ $slot ?? '' }}
         </section>
       </div>
       
@@ -46,5 +49,7 @@
   
   <script src="{{ asset('stisla/assets/js/scripts.js') }}"></script>
   <script src="{{ asset('stisla/assets/js/custom.js') }}"></script>
+  
+  @livewireScripts
 </body>
 </html>

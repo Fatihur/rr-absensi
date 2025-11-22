@@ -16,11 +16,13 @@ class WorkSchedule extends Model
         'break_end',
         'check_out_time',
         'late_tolerance',
+        'working_days',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'working_days' => 'array',
     ];
 
     public function branch(): BelongsTo

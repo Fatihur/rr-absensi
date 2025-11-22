@@ -45,12 +45,19 @@ class WorkScheduleController extends Controller
             'branch_id' => 'required|exists:branches,id',
             'position_id' => 'nullable|exists:positions,id',
             'name' => 'required|string|max:255',
-            'check_in_time' => 'required|date_format:H:i',
-            'break_start' => 'nullable|date_format:H:i',
-            'break_end' => 'nullable|date_format:H:i',
-            'check_out_time' => 'required|date_format:H:i',
+            'check_in_time' => 'required',
+            'break_start' => 'nullable',
+            'break_end' => 'nullable',
+            'check_out_time' => 'required',
             'late_tolerance' => 'required|integer|min:0|max:60',
+            'working_days' => 'nullable|array',
+            'working_days.*' => 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
         ]);
+
+        // Ensure working_days is set to null if not provided
+        if (!$request->has('working_days')) {
+            $validated['working_days'] = null;
+        }
 
         $schedule = WorkSchedule::create($validated);
 
@@ -88,18 +95,30 @@ class WorkScheduleController extends Controller
 
     public function update(Request $request, WorkSchedule $workSchedule)
     {
-        $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'position_id' => 'nullable|exists:positions,id',
-            'name' => 'required|string|max:255',
-            'check_in_time' => 'required|date_format:H:i',
-            'break_start' => 'nullable|date_format:H:i',
-            'break_end' => 'nullable|date_format:H:i',
-            'check_out_time' => 'required|date_format:H:i',
-            'late_tolerance' => 'required|integer|min:0|max:60',
-        ]);
+        try {
+            $validated = $request->validate([
+                'branch_id' => 'required|exists:branches,id',
+                'position_id' => 'nullable|exists:positions,id',
+                'name' => 'required|string|max:255',
+                'check_in_time' => 'required',
+                'break_start' => 'nullable',
+                'break_end' => 'nullable',
+                'check_out_time' => 'required',
+                'late_tolerance' => 'required|integer|min:0|max:60',
+                'working_days' => 'nullable|array',
+                'working_days.*' => 'in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+            ]);
 
-        $workSchedule->update($validated);
+            // Ensure working_days is set to null if not provided
+            if (!$request->has('working_days')) {
+                $validated['working_days'] = null;
+            }
+
+            $workSchedule->update($validated);
+        } catch (\Exception $e) {
+            \Log::error('Update Work Schedule Error: ' . $e->getMessage());
+            return back()->withErrors(['error' => $e->getMessage()])->withInput();
+        }
 
         AuditLog::create([
             'user_id' => Auth::id(),

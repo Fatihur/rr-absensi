@@ -5,28 +5,22 @@
 @section('content')
 <div class="section-header">
   <div class="section-header-back">
-    <a href="{{ route('super.employees.index') }}" class="btn btn-icon"><i class="fas fa-arrow-left"></i></a>
+    <a href="{{ route('admin.employees.show', $employee) }}" class="btn btn-icon"><i class="fas fa-arrow-left"></i></a>
   </div>
   <h1>Edit Karyawan</h1>
+  <div class="section-header-breadcrumb">
+    <div class="breadcrumb-item active"><a href="{{ route('dashboard') }}">Dashboard</a></div>
+    <div class="breadcrumb-item"><a href="{{ route('admin.employees.index') }}">Karyawan</a></div>
+    <div class="breadcrumb-item"><a href="{{ route('admin.employees.show', $employee) }}">Detail</a></div>
+    <div class="breadcrumb-item">Edit</div>
+  </div>
 </div>
 
 <div class="section-body">
-  @if ($errors->any())
-    <div class="alert alert-danger alert-dismissible show fade">
-      <div class="alert-title">Error!</div>
-      <ul class="mb-0">
-        @foreach ($errors->all() as $error)
-          <li>{{ $error }}</li>
-        @endforeach
-      </ul>
-      <button class="close" data-dismiss="alert">
-        <span>&times;</span>
-      </button>
-    </div>
-  @endif
-  <form action="{{ route('super.employees.update', $employee) }}" method="POST" enctype="multipart/form-data">
+  <form action="{{ route('admin.employees.update', $employee) }}" method="POST" enctype="multipart/form-data">
     @csrf
     @method('PUT')
+    
     <div class="row">
       <div class="col-12 col-md-6">
         <div class="card">
@@ -35,7 +29,7 @@
           </div>
           <div class="card-body">
             <div class="form-group">
-              <label>Nama <span class="text-danger">*</span></label>
+              <label>Nama Pengguna <span class="text-danger">*</span></label>
               <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" 
                 value="{{ old('name', $employee->user->name) }}" required>
               @error('name')
@@ -63,7 +57,7 @@
 
             <div class="form-group">
               <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" value="1"
+                <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" 
                   {{ old('is_active', $employee->is_active) ? 'checked' : '' }}>
                 <label class="custom-control-label" for="is_active">Aktif</label>
               </div>
@@ -80,11 +74,8 @@
           <div class="card-body">
             <div class="form-group">
               <label>NIK <span class="text-danger">*</span></label>
-              <input type="text" name="nik" class="form-control @error('nik') is-invalid @enderror" 
-                value="{{ old('nik', $employee->nik) }}" required>
-              @error('nik')
-                <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
+              <input type="text" class="form-control" value="{{ $employee->nik }}" readonly>
+              <small class="form-text text-muted">NIK tidak dapat diubah</small>
             </div>
 
             <div class="form-group">
@@ -106,18 +97,9 @@
             </div>
 
             <div class="form-group">
-              <label>Cabang <span class="text-danger">*</span></label>
-              <select name="branch_id" class="form-control @error('branch_id') is-invalid @enderror" required>
-                <option value="">-- Pilih Cabang --</option>
-                @foreach($branches as $branch)
-                  <option value="{{ $branch->id }}" {{ old('branch_id', $employee->branch_id) == $branch->id ? 'selected' : '' }}>
-                    {{ $branch->name }}
-                  </option>
-                @endforeach
-              </select>
-              @error('branch_id')
-                <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
+              <label>Cabang</label>
+              <input type="text" class="form-control" value="{{ $employee->branch->name }}" readonly>
+              <small class="form-text text-muted">Cabang tidak dapat diubah</small>
             </div>
 
             <div class="form-group">
@@ -136,12 +118,9 @@
             </div>
 
             <div class="form-group">
-              <label>Tanggal Bergabung <span class="text-danger">*</span></label>
-              <input type="date" name="join_date" class="form-control @error('join_date') is-invalid @enderror" 
-                value="{{ old('join_date', $employee->join_date ? $employee->join_date->format('Y-m-d') : '') }}" required>
-              @error('join_date')
-                <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
+              <label>Tanggal Bergabung</label>
+              <input type="text" class="form-control" value="{{ $employee->join_date ? $employee->join_date->format('d F Y') : '-' }}" readonly>
+              <small class="form-text text-muted">Tanggal bergabung tidak dapat diubah</small>
             </div>
 
             <div class="form-group">
@@ -151,12 +130,12 @@
                   <img src="{{ asset('storage/' . $employee->face_photo) }}" class="img-thumbnail" width="150">
                 </div>
               @endif
-              <input type="file" name="face_photo" class="form-control @error('face_photo') is-invalid @enderror" 
+              <input type="file" name="face_photo" class="form-control-file @error('face_photo') is-invalid @enderror" 
                 accept="image/*">
               @error('face_photo')
                 <div class="invalid-feedback">{{ $message }}</div>
               @enderror
-              <small class="form-text text-muted">Upload foto baru untuk mengganti foto lama</small>
+              <small class="form-text text-muted">Upload foto baru untuk mengganti foto lama. Max 2MB</small>
             </div>
           </div>
         </div>
@@ -168,10 +147,10 @@
         <div class="card">
           <div class="card-footer text-right">
             <button type="submit" class="btn btn-primary">
-              <i class="fas fa-save"></i> Update
+              <i class="fas fa-save"></i> Simpan Perubahan
             </button>
-            <a href="{{ route('super.employees.index') }}" class="btn btn-secondary">
-              Batal
+            <a href="{{ route('admin.employees.show', $employee) }}" class="btn btn-secondary">
+              <i class="fas fa-times"></i> Batal
             </a>
           </div>
         </div>

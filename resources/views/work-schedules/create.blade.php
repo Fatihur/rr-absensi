@@ -75,6 +75,55 @@
           <input type="number" name="late_tolerance" class="form-control @error('late_tolerance') is-invalid @enderror" value="{{ old('late_tolerance', 15) }}" min="0" max="60" required>
           @error('late_tolerance')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
+        <div class="form-group">
+          <label>Hari Kerja</label>
+          <div class="row">
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="monday" class="custom-control-input" id="day-monday" {{ is_array(old('working_days')) && in_array('monday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-monday">Senin</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="tuesday" class="custom-control-input" id="day-tuesday" {{ is_array(old('working_days')) && in_array('tuesday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-tuesday">Selasa</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="wednesday" class="custom-control-input" id="day-wednesday" {{ is_array(old('working_days')) && in_array('wednesday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-wednesday">Rabu</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="thursday" class="custom-control-input" id="day-thursday" {{ is_array(old('working_days')) && in_array('thursday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-thursday">Kamis</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="friday" class="custom-control-input" id="day-friday" {{ is_array(old('working_days')) && in_array('friday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-friday">Jumat</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="saturday" class="custom-control-input" id="day-saturday" {{ is_array(old('working_days')) && in_array('saturday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-saturday">Sabtu</label>
+              </div>
+            </div>
+            <div class="col-md-3 col-6">
+              <div class="custom-control custom-checkbox">
+                <input type="checkbox" name="working_days[]" value="sunday" class="custom-control-input" id="day-sunday" {{ is_array(old('working_days')) && in_array('sunday', old('working_days')) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="day-sunday">Minggu</label>
+              </div>
+            </div>
+          </div>
+          <small class="text-muted">Kosongkan jika berlaku untuk semua hari</small>
+          @error('working_days')<div class="text-danger">{{ $message }}</div>@enderror
+        </div>
       </div>
       <div class="card-footer text-right">
         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
