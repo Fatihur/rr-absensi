@@ -1,5 +1,43 @@
 # Changelog - Permission Fix Update
 
+## Version 2.1.2 - 2025-11-24
+
+### 🐛 Critical Bug Fix
+
+#### Timezone Issue - Wrong Check-In Time ⭐ CRITICAL
+**Problem:** Check-in jam 06:25 tersimpan sebagai 22:25 (perbedaan 8 jam)
+
+**Root Cause:**
+- Application timezone: UTC (default)
+- Database columns: `time` type (no timezone info)
+- Indonesia timezone: WIB (UTC+7) / WITA (UTC+8)
+
+**Solutions:**
+- ✅ Change application timezone to `Asia/Jakarta` in `config/app.php`
+- ✅ Create migration to change `check_in` and `check_out` from `time` to `datetime`
+- ✅ Model already has correct `datetime` casting
+
+**Impact:**
+- All new check-in/check-out will save with correct time
+- Old data remains as-is (historical)
+- Reports will show correct time
+
+**Files Changed:**
+- `config/app.php` - Timezone changed to Asia/Jakarta
+- `database/migrations/2025_11_24_060434_change_checkin_checkout_to_datetime_in_attendances_table.php` - New migration
+
+**Documentation:**
+- `TIMEZONE_FIX.md` - Complete timezone fix guide
+
+**Deployment Required:**
+```bash
+php artisan migrate
+php artisan config:clear
+php artisan cache:clear
+```
+
+---
+
 ## Version 2.1.1 - 2025-11-23
 
 ### 🚀 Performance Improvements
