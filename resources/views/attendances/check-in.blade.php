@@ -294,45 +294,84 @@
     radius: branchRadius
   }).addTo(map);
 
-  // Get current location
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      var lat = position.coords.latitude;
-      var lng = position.coords.longitude;
-
-      $('#latitude').val(lat);
-      $('#longitude').val(lng);
-
-      // Add user marker
-      marker = L.marker([lat, lng], {
-        icon: L.icon({
-          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41]
-        })
-      }).addTo(map);
-      marker.bindPopup('<strong>Lokasi Anda</strong>');
-
-      map.setView([lat, lng], 16);
-
-      // Calculate distance
-      var distance = calculateDistance(lat, lng, branchLat, branchLng);
-      
-      if (distance <= branchRadius) {
-        $('#locationInfo').removeClass('alert-info alert-danger').addClass('alert-success');
-        $('#locationInfo').html('<i class="fas fa-check-circle"></i> Anda berada dalam radius kantor (' + Math.round(distance) + 'm)');
-      } else {
-        $('#locationInfo').removeClass('alert-info alert-success').addClass('alert-danger');
-        $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Anda berada di luar radius kantor (' + Math.round(distance) + 'm). Absensi akan ditandai bermasalah.');
-      }
-    }, function(error) {
+  // Request location permission and get location
+  var locationPermissionGranted = false;
+  
+  function requestLocationPermission() {
+    if (!navigator.geolocation) {
       $('#locationInfo').removeClass('alert-info').addClass('alert-danger');
-      $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Gagal mendapatkan lokasi: ' + error.message);
-    });
+      $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Browser Anda tidak mendukung geolokasi');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+
+        $('#latitude').val(lat);
+        $('#longitude').val(lng);
+        locationPermissionGranted = true;
+
+        // Add user marker
+        marker = L.marker([lat, lng], {
+          icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          })
+        }).addTo(map);
+        marker.bindPopup('<strong>Lokasi Anda</strong>');
+
+        map.setView([lat, lng], 16);
+
+        // Calculate distance
+        var distance = calculateDistance(lat, lng, branchLat, branchLng);
+        
+        if (distance <= branchRadius) {
+          $('#locationInfo').removeClass('alert-info alert-danger').addClass('alert-success');
+          $('#locationInfo').html('<i class="fas fa-check-circle"></i> Anda berada dalam radius kantor (' + Math.round(distance) + 'm)');
+        } else {
+          $('#locationInfo').removeClass('alert-info alert-success').addClass('alert-danger');
+          $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Anda berada di luar radius kantor (' + Math.round(distance) + 'm). Absensi akan ditandai bermasalah.');
+        }
+      },
+      function(error) {
+        locationPermissionGranted = false;
+        $('#locationInfo').removeClass('alert-info').addClass('alert-danger');
+        
+        var errorMessage = '';
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> <strong>Izin lokasi ditolak!</strong><br>' +
+                          '<small>Silakan izinkan akses lokasi di pengaturan browser Anda dan refresh halaman.</small>';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Lokasi tidak tersedia. Pastikan GPS aktif.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Waktu habis. Coba lagi.';
+            break;
+          default:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Gagal mendapatkan lokasi: ' + error.message;
+        }
+        
+        $('#locationInfo').html(errorMessage);
+        showAlert('Akses lokasi diperlukan untuk absensi. Silakan izinkan akses lokasi.', 'danger');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   }
+
+  // Call location permission on page load
+  requestLocationPermission();
 
   function calculateDistance(lat1, lon1, lat2, lon2) {
     var R = 6371000; // meters
@@ -547,10 +586,16 @@
   }
 
   function startCamera() {
+    // Check if camera is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showAlert('Browser Anda tidak mendukung akses kamera', 'danger');
+      return;
+    }
+
     navigator.mediaDevices.getUserMedia({ 
       video: { 
-        width: 640, 
-        height: 480,
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
         facingMode: 'user'
       } 
     })
@@ -575,7 +620,22 @@
         });
       })
       .catch(function(err) {
-        showAlert('Error accessing camera: ' + err.message, 'danger');
+        var errorMessage = '';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          errorMessage = '<strong>Izin kamera ditolak!</strong><br>' +
+                        'Silakan izinkan akses kamera di pengaturan browser:<br>' +
+                        '1. Klik ikon gembok/info di address bar<br>' +
+                        '2. Pilih "Izinkan" untuk Kamera<br>' +
+                        '3. Refresh halaman dan coba lagi';
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          errorMessage = 'Kamera tidak ditemukan pada perangkat Anda';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          errorMessage = 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut dan coba lagi.';
+        } else {
+          errorMessage = 'Gagal mengakses kamera: ' + err.message;
+        }
+        
+        showAlert(errorMessage, 'danger');
       });
   }
 

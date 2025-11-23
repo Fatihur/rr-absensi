@@ -133,13 +133,39 @@
     document.getElementById('longitude').value = lng.toFixed(6);
   });
 
-  // Get current location
+  // Get current location with permission handling
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      var lat = position.coords.latitude;
-      var lng = position.coords.longitude;
-      map.setView([lat, lng], 15);
-    });
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+        map.setView([lat, lng], 15);
+      },
+      function(error) {
+        var errorMessage = '';
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Izin lokasi ditolak. Silakan izinkan akses lokasi di pengaturan browser.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Lokasi tidak tersedia. Pastikan GPS aktif.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Waktu habis mendapatkan lokasi.';
+            break;
+          default:
+            errorMessage = 'Gagal mendapatkan lokasi.';
+        }
+        alert(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  } else {
+    alert('Browser Anda tidak mendukung geolokasi');
   }
 </script>
 @endpush

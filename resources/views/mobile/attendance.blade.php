@@ -60,6 +60,41 @@
     gap: 10px;
     justify-content: center;
   }
+
+  .permission-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 10px;
+  }
+
+  .permission-status.granted {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .permission-status.denied {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  .permission-status.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
 </style>
 @endpush
 
@@ -77,6 +112,17 @@
   
   <div id="locationInfo" class="alert alert-info alert-mobile">
     <i class="fas fa-spinner fa-spin"></i> Mendapatkan lokasi...
+  </div>
+
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+    <div id="locationPermissionStatus" class="permission-status pending">
+      <i class="fas fa-map-marker-alt pulse"></i>
+      <span>Meminta izin lokasi...</span>
+    </div>
+    <div id="cameraPermissionStatus" class="permission-status pending" style="display: none;">
+      <i class="fas fa-camera pulse"></i>
+      <span>Izin kamera diperlukan</span>
+    </div>
   </div>
   
   <div style="font-size: 13px; color: #6c757d; margin-top: 10px;">
@@ -212,6 +258,55 @@
 </div>
 @endif
 
+<!-- Permission Help Modal -->
+<div class="camera-modal" id="permissionModal" style="background: rgba(0, 0, 0, 0.9);">
+  <div class="camera-header">
+    <h5 style="margin: 0;"><i class="fas fa-info-circle"></i> Izin Diperlukan</h5>
+    <button type="button" style="background: none; border: none; color: white; font-size: 24px;" id="closePermissionModal">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="camera-content">
+    <div style="width: 100%; max-width: 500px; color: white; padding: 20px;">
+      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+        <h6 style="color: #ffc107; margin-bottom: 15px;">
+          <i class="fas fa-map-marker-alt"></i> Izin Lokasi
+        </h6>
+        <ol style="font-size: 14px; line-height: 1.8; padding-left: 20px;">
+          <li>Klik ikon <strong>gembok</strong> atau <strong>info (i)</strong> di address bar browser</li>
+          <li>Cari pengaturan <strong>"Lokasi"</strong> atau <strong>"Location"</strong></li>
+          <li>Pilih <strong>"Izinkan"</strong> atau <strong>"Allow"</strong></li>
+          <li>Refresh halaman ini</li>
+        </ol>
+      </div>
+      
+      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px;">
+        <h6 style="color: #17a2b8; margin-bottom: 15px;">
+          <i class="fas fa-camera"></i> Izin Kamera
+        </h6>
+        <ol style="font-size: 14px; line-height: 1.8; padding-left: 20px;">
+          <li>Klik ikon <strong>gembok</strong> atau <strong>info (i)</strong> di address bar browser</li>
+          <li>Cari pengaturan <strong>"Kamera"</strong> atau <strong>"Camera"</strong></li>
+          <li>Pilih <strong>"Izinkan"</strong> atau <strong>"Allow"</strong></li>
+          <li>Coba lagi untuk mengambil foto</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 20px; padding: 15px; background: rgba(220, 53, 69, 0.2); border-radius: 8px; border-left: 4px solid #dc3545;">
+        <small style="font-size: 13px;">
+          <i class="fas fa-exclamation-triangle"></i> 
+          <strong>Penting:</strong> Izin lokasi dan kamera diperlukan untuk melakukan absensi.
+        </small>
+      </div>
+    </div>
+  </div>
+  <div class="camera-footer">
+    <button type="button" class="btn btn-mobile btn-mobile-primary" id="retryPermission" style="flex: 1; max-width: 300px;">
+      <i class="fas fa-redo"></i> Coba Lagi
+    </button>
+  </div>
+</div>
+
 <!-- Camera Modal -->
 <div class="camera-modal" id="cameraModal">
   <div class="camera-header">
@@ -253,6 +348,7 @@
   var currentAction = '';
   var capturedBlob = null;
   var stream;
+  var locationPermissionGranted = false;
 
   // Initialize map
   map = L.map('map').setView([branchLat, branchLng], 15);
@@ -281,42 +377,115 @@
     radius: branchRadius
   }).addTo(map);
 
-  // Get current location
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      var lat = position.coords.latitude;
-      var lng = position.coords.longitude;
-
-      $('#latitude').val(lat);
-      $('#longitude').val(lng);
-
-      marker = L.marker([lat, lng], {
-        icon: L.icon({
-          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41]
-        })
-      }).addTo(map).bindPopup('<strong>Lokasi Anda</strong>');
-
-      map.setView([lat, lng], 16);
-
-      var distance = calculateDistance(lat, lng, branchLat, branchLng);
-      
-      if (distance <= branchRadius) {
-        $('#locationInfo').removeClass('alert-info alert-danger').addClass('alert-success');
-        $('#locationInfo').html('<i class="fas fa-check-circle"></i> Anda dalam radius kantor (' + Math.round(distance) + 'm)');
-      } else {
-        $('#locationInfo').removeClass('alert-info alert-success').addClass('alert-danger');
-        $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Anda di luar radius (' + Math.round(distance) + 'm)');
-      }
-    }, function(error) {
+  // Request location permission and get location
+  function requestLocationPermission() {
+    if (!navigator.geolocation) {
       $('#locationInfo').removeClass('alert-info').addClass('alert-danger');
-      $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Gagal mendapatkan lokasi');
-    });
+      $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Browser Anda tidak mendukung geolokasi');
+      updatePermissionStatus('location', 'denied', 'Browser tidak support');
+      return;
+    }
+
+    updatePermissionStatus('location', 'pending', 'Meminta izin lokasi...');
+
+    // Request location with high accuracy
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        // Success callback
+        var lat = position.coords.latitude;
+        var lng = position.coords.longitude;
+
+        $('#latitude').val(lat);
+        $('#longitude').val(lng);
+        locationPermissionGranted = true;
+
+        marker = L.marker([lat, lng], {
+          icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          })
+        }).addTo(map).bindPopup('<strong>Lokasi Anda</strong>');
+
+        map.setView([lat, lng], 16);
+
+        var distance = calculateDistance(lat, lng, branchLat, branchLng);
+        
+        if (distance <= branchRadius) {
+          $('#locationInfo').removeClass('alert-info alert-danger').addClass('alert-success');
+          $('#locationInfo').html('<i class="fas fa-check-circle"></i> Anda dalam radius kantor (' + Math.round(distance) + 'm)');
+        } else {
+          $('#locationInfo').removeClass('alert-info alert-success').addClass('alert-danger');
+          $('#locationInfo').html('<i class="fas fa-exclamation-triangle"></i> Anda di luar radius (' + Math.round(distance) + 'm)');
+        }
+
+        updatePermissionStatus('location', 'granted', 'Lokasi diizinkan ✓');
+      },
+      function(error) {
+        // Error callback
+        locationPermissionGranted = false;
+        $('#locationInfo').removeClass('alert-info').addClass('alert-danger');
+        
+        var errorMessage = '';
+        var statusText = '';
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> <strong>Izin lokasi ditolak!</strong><br>' +
+                          '<small>Silakan izinkan akses lokasi di pengaturan browser Anda:<br>' +
+                          '1. Klik ikon gembok/info di address bar<br>' +
+                          '2. Pilih "Izinkan" untuk Lokasi<br>' +
+                          '3. Refresh halaman ini</small>';
+            statusText = 'Izin ditolak';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Lokasi tidak tersedia. Pastikan GPS aktif.';
+            statusText = 'GPS tidak aktif';
+            break;
+          case error.TIMEOUT:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Waktu habis. Coba lagi.';
+            statusText = 'Timeout';
+            break;
+          default:
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Gagal mendapatkan lokasi';
+            statusText = 'Gagal';
+        }
+        
+        $('#locationInfo').html(errorMessage);
+        updatePermissionStatus('location', 'denied', statusText);
+        
+        // Show alert to user
+        showAlert('Akses lokasi diperlukan untuk absensi. Silakan izinkan akses lokasi.', 'danger');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   }
+
+  // Update permission status indicator
+  function updatePermissionStatus(type, status, text) {
+    var elementId = type === 'location' ? '#locationPermissionStatus' : '#cameraPermissionStatus';
+    var icon = type === 'location' ? 'fa-map-marker-alt' : 'fa-camera';
+    
+    $(elementId).removeClass('granted denied pending');
+    $(elementId).addClass(status);
+    $(elementId).find('i').removeClass('pulse');
+    
+    if (status === 'pending') {
+      $(elementId).find('i').addClass('pulse');
+    }
+    
+    $(elementId).find('span').text(text);
+    $(elementId).show();
+  }
+
+  // Call location permission on page load
+  requestLocationPermission();
 
   function calculateDistance(lat1, lon1, lat2, lon2) {
     var R = 6371000;
@@ -344,11 +513,29 @@
     }, 5000);
   }
 
+  // Show permission help modal
+  function showPermissionHelp() {
+    $('#permissionModal').addClass('show');
+  }
+
+  // Close permission modal
+  $('#closePermissionModal').on('click', function() {
+    $('#permissionModal').removeClass('show');
+  });
+
+  // Retry permission
+  $('#retryPermission').on('click', function() {
+    $('#permissionModal').removeClass('show');
+    requestLocationPermission();
+  });
+
   // Event Handlers - Wrap in document ready
   $(document).ready(function() {
     $('#checkInBtn').on('click', function() {
-      if (!$('#latitude').val()) {
-        showAlert('Tunggu hingga lokasi terdeteksi', 'warning');
+      // Check location permission first
+      if (!locationPermissionGranted || !$('#latitude').val()) {
+        showAlert('Akses lokasi diperlukan. Silakan izinkan akses lokasi terlebih dahulu.', 'warning');
+        showPermissionHelp();
         return;
       }
       currentAction = 'check-in';
@@ -396,8 +583,10 @@
   });
 
   $('#checkOutBtn').on('click', function() {
-    if (!$('#latitude').val()) {
-      showAlert('Tunggu hingga lokasi terdeteksi', 'warning');
+    // Check location permission first
+    if (!locationPermissionGranted || !$('#latitude').val()) {
+      showAlert('Akses lokasi diperlukan. Silakan izinkan akses lokasi terlebih dahulu.', 'warning');
+      showPermissionHelp();
       return;
     }
     currentAction = 'check-out';
@@ -405,8 +594,24 @@
   });
 
   function openCamera() {
+    // Check if camera is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showAlert('Browser Anda tidak mendukung akses kamera', 'danger');
+      updatePermissionStatus('camera', 'denied', 'Browser tidak support');
+      return;
+    }
+
     $('#cameraModal').addClass('show');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    updatePermissionStatus('camera', 'pending', 'Meminta izin kamera...');
+    
+    // Request camera permission
+    navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      } 
+    })
       .then(function(s) {
         stream = s;
         document.getElementById('video').srcObject = stream;
@@ -414,10 +619,30 @@
         $('#canvas').hide();
         $('#captureBtn').show();
         $('#submitBtn').hide();
+        updatePermissionStatus('camera', 'granted', 'Kamera diizinkan ✓');
       })
       .catch(function(err) {
-        showAlert('Error: ' + err.message, 'danger');
         $('#cameraModal').removeClass('show');
+        
+        var errorMessage = '';
+        var statusText = '';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          errorMessage = 'Izin kamera ditolak! Silakan izinkan akses kamera.';
+          statusText = 'Izin ditolak';
+          showPermissionHelp();
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          errorMessage = 'Kamera tidak ditemukan pada perangkat Anda';
+          statusText = 'Tidak ditemukan';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          errorMessage = 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut dan coba lagi.';
+          statusText = 'Sedang digunakan';
+        } else {
+          errorMessage = 'Gagal mengakses kamera: ' + err.message;
+          statusText = 'Gagal';
+        }
+        
+        updatePermissionStatus('camera', 'denied', statusText);
+        showAlert(errorMessage, 'danger');
       });
   }
 
