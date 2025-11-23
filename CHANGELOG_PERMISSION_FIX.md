@@ -6,11 +6,13 @@
 
 #### Camera & Location Permission Improvements
 - **Auto-request permission on page load** - Lokasi otomatis di-request saat halaman dibuka
+- **GPS Detection Modal** ⭐ NEW - Deteksi otomatis apakah GPS aktif, tampilkan modal instruksi jika tidak aktif
 - **Clear error messages** - Pesan error lebih jelas dan informatif
 - **Permission help modal** - Modal dengan instruksi lengkap cara mengizinkan akses
 - **Visual permission status** - Badge indicator untuk status lokasi dan kamera
 - **Better camera quality** - Resolusi kamera ditingkatkan ke 1280x720
 - **High accuracy GPS** - GPS lebih akurat dengan enableHighAccuracy option
+- **Direct Settings Access** ⭐ NEW - Tombol untuk langsung membuka pengaturan GPS di HP
 
 ### ✨ New Features
 
@@ -21,27 +23,35 @@
 - Real-time update status
 - Animasi pulse saat pending
 
-#### 2. Permission Help Modal
+#### 2. GPS Detection Modal ⭐ NEW
+- Deteksi otomatis apakah GPS/Location Services aktif
+- Modal khusus dengan instruksi cara mengaktifkan GPS
+- Instruksi terpisah untuk Android dan iOS
+- Tombol "Buka Settings" untuk langsung ke pengaturan GPS
+- Tombol "Coba Lagi" setelah GPS diaktifkan
+- Tips untuk hasil GPS terbaik
+
+#### 3. Permission Help Modal
 - Instruksi step-by-step untuk berbagai browser
 - Panduan untuk Android dan iOS
 - Tombol "Coba Lagi" untuk re-request permission
 - Visual yang lebih user-friendly
 
-#### 3. Enhanced Error Handling
+#### 4. Enhanced Error Handling
 - Specific error messages untuk setiap jenis error:
-  - `PERMISSION_DENIED` → Instruksi cara mengizinkan
-  - `POSITION_UNAVAILABLE` → Minta aktifkan GPS
-  - `TIMEOUT` → Minta coba lagi
+  - `PERMISSION_DENIED` → Instruksi cara mengizinkan + Permission Help Modal
+  - `POSITION_UNAVAILABLE` → GPS Detection Modal ⭐ NEW
+  - `TIMEOUT` → GPS Detection Modal ⭐ NEW
   - `NOT_FOUND` → Device tidak punya kamera/GPS
   - `NOT_READABLE` → Kamera sedang digunakan
 
-#### 4. Improved GPS Accuracy
+#### 5. Improved GPS Accuracy
 - `enableHighAccuracy: true` untuk GPS lebih akurat
 - `timeout: 10000` (10 detik)
 - `maximumAge: 0` untuk data fresh
 - Better handling untuk GPS lock
 
-#### 5. Better Camera Quality
+#### 6. Better Camera Quality
 - Resolusi ideal: 1280x720 (dari 640x480)
 - Adaptive resolution based on device capability
 - Front camera (facingMode: 'user')

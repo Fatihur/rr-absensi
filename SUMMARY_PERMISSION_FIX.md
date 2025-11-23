@@ -14,30 +14,37 @@ Ketika aplikasi dibuka di HP dan sudah di-hosting, user mengalami masalah:
 - Pop-up browser native akan muncul otomatis
 - User dipaksa untuk memilih Allow/Deny
 
-### 2. **Clear Error Messages**
+### 2. **GPS/Location Services Detection** ⭐ NEW
+- Deteksi otomatis apakah GPS aktif atau tidak
+- Modal khusus dengan instruksi cara mengaktifkan GPS
+- Instruksi terpisah untuk Android dan iOS
+- Tombol "Buka Settings" untuk langsung ke pengaturan
+- Tombol "Coba Lagi" setelah GPS diaktifkan
+
+### 3. **Clear Error Messages**
 - Error message spesifik untuk setiap jenis error:
   - Permission Denied → Instruksi cara mengizinkan
-  - Position Unavailable → Minta aktifkan GPS
-  - Timeout → Minta coba lagi
+  - Position Unavailable → Modal GPS tidak aktif
+  - Timeout → Modal GPS tidak aktif
   - Not Found → Device tidak punya kamera/GPS
 
-### 3. **Permission Help Modal**
+### 4. **Permission Help Modal**
 - Modal dengan instruksi lengkap cara mengizinkan
 - Step-by-step untuk berbagai browser
 - Tombol "Coba Lagi" untuk re-request permission
 
-### 4. **Visual Permission Status**
+### 5. **Visual Permission Status**
 - Badge indicator untuk status lokasi dan kamera
 - 3 status: Pending (kuning), Granted (hijau), Denied (merah)
 - Animasi pulse saat pending
 - Real-time update status
 
-### 5. **Better Camera Quality**
+### 6. **Better Camera Quality**
 - Resolusi ditingkatkan ke 1280x720 (dari 640x480)
 - Menggunakan `ideal` resolution untuk adaptif
 - Facing mode 'user' untuk front camera
 
-### 6. **High Accuracy GPS**
+### 7. **High Accuracy GPS**
 - `enableHighAccuracy: true` untuk GPS lebih akurat
 - Timeout 10 detik
 - `maximumAge: 0` untuk data fresh
@@ -48,18 +55,24 @@ Ketika aplikasi dibuka di HP dan sudah di-hosting, user mengalami masalah:
 **Perubahan:**
 - ✅ Tambah fungsi `requestLocationPermission()` dengan error handling
 - ✅ Tambah fungsi `updatePermissionStatus()` untuk update UI
+- ✅ Tambah modal `#gpsModal` untuk GPS tidak aktif ⭐ NEW
 - ✅ Tambah modal `#permissionModal` dengan instruksi lengkap
 - ✅ Tambah badge status permission
 - ✅ Tambah CSS untuk animasi dan styling
 - ✅ Auto-request lokasi on page load
 - ✅ Validasi permission sebelum buka kamera
+- ✅ Deteksi GPS aktif/tidak aktif ⭐ NEW
+- ✅ Tombol "Buka Settings" untuk langsung ke pengaturan GPS ⭐ NEW
 
 ### 2. `resources/views/attendances/check-in.blade.php`
 **Perubahan:**
 - ✅ Tambah fungsi `requestLocationPermission()` dengan error handling
+- ✅ Tambah modal `#gpsModal` untuk GPS tidak aktif ⭐ NEW
 - ✅ Update fungsi `startCamera()` dengan error handling lengkap
 - ✅ Tingkatkan kualitas video kamera
 - ✅ Auto-request lokasi on page load
+- ✅ Deteksi GPS aktif/tidak aktif ⭐ NEW
+- ✅ Tombol "Buka Settings" untuk langsung ke pengaturan GPS ⭐ NEW
 
 ### 3. `resources/views/branches/create.blade.php`
 **Perubahan:**

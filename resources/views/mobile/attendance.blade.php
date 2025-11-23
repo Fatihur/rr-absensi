@@ -258,6 +258,75 @@
 </div>
 @endif
 
+<!-- GPS Not Active Modal -->
+<div class="camera-modal" id="gpsModal" style="background: rgba(0, 0, 0, 0.9);">
+  <div class="camera-header">
+    <h5 style="margin: 0;"><i class="fas fa-map-marked-alt"></i> GPS Tidak Aktif</h5>
+    <button type="button" style="background: none; border: none; color: white; font-size: 24px;" id="closeGpsModal">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="camera-content">
+    <div style="width: 100%; max-width: 500px; color: white; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <i class="fas fa-map-marked-alt" style="font-size: 64px; color: #ffc107;"></i>
+      </div>
+      
+      <div style="background: rgba(255, 193, 7, 0.2); padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+        <h6 style="color: #ffc107; margin-bottom: 15px; text-align: center;">
+          <i class="fas fa-exclamation-triangle"></i> GPS/Location Services Tidak Aktif
+        </h6>
+        <p style="font-size: 14px; line-height: 1.6; text-align: center; margin-bottom: 0;">
+          Aplikasi memerlukan GPS aktif untuk mendeteksi lokasi Anda. Silakan aktifkan GPS/Location Services di pengaturan HP Anda.
+        </p>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-bottom: 15px;">
+        <h6 style="color: #4CAF50; margin-bottom: 15px;">
+          <i class="fab fa-android"></i> Android
+        </h6>
+        <ol style="font-size: 14px; line-height: 1.8; padding-left: 20px;">
+          <li>Buka <strong>Settings</strong> (Pengaturan)</li>
+          <li>Pilih <strong>Location</strong> (Lokasi)</li>
+          <li>Aktifkan <strong>Use location</strong> atau toggle ke <strong>ON</strong></li>
+          <li>Pilih mode <strong>High accuracy</strong> untuk hasil terbaik</li>
+          <li>Kembali ke aplikasi dan klik "Coba Lagi"</li>
+        </ol>
+      </div>
+      
+      <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px;">
+        <h6 style="color: #007AFF; margin-bottom: 15px;">
+          <i class="fab fa-apple"></i> iOS (iPhone/iPad)
+        </h6>
+        <ol style="font-size: 14px; line-height: 1.8; padding-left: 20px;">
+          <li>Buka <strong>Settings</strong> (Pengaturan)</li>
+          <li>Pilih <strong>Privacy & Security</strong></li>
+          <li>Pilih <strong>Location Services</strong></li>
+          <li>Aktifkan toggle <strong>Location Services</strong> ke <strong>ON</strong></li>
+          <li>Scroll ke bawah, cari browser Anda (Safari/Chrome)</li>
+          <li>Pilih <strong>While Using the App</strong> atau <strong>Always</strong></li>
+          <li>Kembali ke aplikasi dan klik "Coba Lagi"</li>
+        </ol>
+      </div>
+
+      <div style="margin-top: 20px; padding: 15px; background: rgba(220, 53, 69, 0.2); border-radius: 8px; border-left: 4px solid #dc3545;">
+        <small style="font-size: 13px;">
+          <i class="fas fa-info-circle"></i> 
+          <strong>Tips:</strong> Untuk hasil terbaik, gunakan aplikasi di tempat terbuka (outdoor) agar GPS lebih cepat mendeteksi lokasi.
+        </small>
+      </div>
+    </div>
+  </div>
+  <div class="camera-footer">
+    <button type="button" class="btn btn-mobile btn-mobile-warning" id="openGpsSettings" style="flex: 1; max-width: 200px;">
+      <i class="fas fa-cog"></i> Buka Settings
+    </button>
+    <button type="button" class="btn btn-mobile btn-mobile-primary" id="retryGps" style="flex: 1; max-width: 200px;">
+      <i class="fas fa-redo"></i> Coba Lagi
+    </button>
+  </div>
+</div>
+
 <!-- Permission Help Modal -->
 <div class="camera-modal" id="permissionModal" style="background: rgba(0, 0, 0, 0.9);">
   <div class="camera-header">
@@ -439,14 +508,19 @@
                           '2. Pilih "Izinkan" untuk Lokasi<br>' +
                           '3. Refresh halaman ini</small>';
             statusText = 'Izin ditolak';
+            showPermissionHelp();
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Lokasi tidak tersedia. Pastikan GPS aktif.';
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> <strong>GPS tidak aktif!</strong><br>' +
+                          '<small>Silakan aktifkan GPS/Location Services di pengaturan HP Anda.</small>';
             statusText = 'GPS tidak aktif';
+            showGpsModal();
             break;
           case error.TIMEOUT:
-            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Waktu habis. Coba lagi.';
+            errorMessage = '<i class="fas fa-exclamation-triangle"></i> Waktu habis mendapatkan lokasi.<br>' +
+                          '<small>Pastikan GPS aktif dan coba di tempat terbuka.</small>';
             statusText = 'Timeout';
+            showGpsModal();
             break;
           default:
             errorMessage = '<i class="fas fa-exclamation-triangle"></i> Gagal mendapatkan lokasi';
@@ -457,7 +531,7 @@
         updatePermissionStatus('location', 'denied', statusText);
         
         // Show alert to user
-        showAlert('Akses lokasi diperlukan untuk absensi. Silakan izinkan akses lokasi.', 'danger');
+        showAlert('Akses lokasi diperlukan untuk absensi. Silakan periksa pengaturan GPS Anda.', 'danger');
       },
       {
         enableHighAccuracy: true,
@@ -466,6 +540,49 @@
       }
     );
   }
+
+  // Show GPS modal
+  function showGpsModal() {
+    $('#gpsModal').addClass('show');
+  }
+
+  // Close GPS modal
+  $('#closeGpsModal').on('click', function() {
+    $('#gpsModal').removeClass('show');
+  });
+
+  // Open GPS settings (will open device settings on mobile)
+  $('#openGpsSettings').on('click', function() {
+    // Try to open location settings
+    // Note: This may not work on all browsers/devices due to security restrictions
+    var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    
+    // Android
+    if (/android/i.test(userAgent)) {
+      // Try to open Android location settings
+      window.location.href = 'android.settings.LOCATION_SOURCE_SETTINGS';
+      
+      // Fallback: show alert with instructions
+      setTimeout(function() {
+        alert('Silakan buka Settings → Location dan aktifkan GPS, kemudian kembali ke aplikasi.');
+      }, 500);
+    }
+    // iOS
+    else if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+      // iOS doesn't allow direct opening of settings
+      alert('Silakan buka Settings → Privacy & Security → Location Services dan aktifkan GPS, kemudian kembali ke aplikasi.');
+    }
+    // Other
+    else {
+      alert('Silakan aktifkan GPS/Location Services di pengaturan perangkat Anda, kemudian kembali ke aplikasi.');
+    }
+  });
+
+  // Retry GPS
+  $('#retryGps').on('click', function() {
+    $('#gpsModal').removeClass('show');
+    requestLocationPermission();
+  });
 
   // Update permission status indicator
   function updatePermissionStatus(type, status, text) {

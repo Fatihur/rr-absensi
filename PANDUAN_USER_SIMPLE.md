@@ -74,16 +74,19 @@ Begitu halaman terbuka, akan muncul **pop-up** seperti ini:
 3. Ubah dari "Ditolak" menjadi **"Izinkan"**
 4. Refresh halaman (tarik ke bawah)
 
-### Masalah 2: Lokasi Tidak Terdeteksi
+### Masalah 2: Lokasi Tidak Terdeteksi / Muncul Modal "GPS Tidak Aktif"
 **Penyebab:** GPS tidak aktif atau izin ditolak
 
 **Solusi:**
-1. Pastikan **GPS aktif** di HP Anda
-   - Android: Settings → Location → ON
-   - iOS: Settings → Privacy → Location Services → ON
-2. Pastikan browser punya izin lokasi
-3. Coba di tempat terbuka (outdoor) untuk GPS lebih akurat
-4. Tunggu 10-15 detik
+1. Jika muncul modal "GPS Tidak Aktif", klik tombol **"Buka Settings"**
+2. Atau buka manual:
+   - **Android:** Settings → Location → ON
+   - **iOS:** Settings → Privacy → Location Services → ON
+3. Pastikan mode GPS diset ke **"High accuracy"** (Android)
+4. Pastikan browser punya izin lokasi
+5. Kembali ke aplikasi dan klik **"Coba Lagi"**
+6. Coba di tempat terbuka (outdoor) untuk GPS lebih akurat
+7. Tunggu 10-15 detik untuk GPS lock
 
 ### Masalah 3: Kamera Tidak Berfungsi
 **Penyebab:** Kamera sedang digunakan atau izin ditolak
