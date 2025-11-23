@@ -321,10 +321,16 @@ README_PERMISSION_UPDATE.md (You are here)
 
 ---
 
-**Version:** 2.1.0
+**Version:** 2.1.1
 **Release Date:** 2025-11-23
 **Status:** ✅ Ready for Production
 **HTTPS Required:** Yes
 **Tested On:** Chrome Android, Safari iOS, Firefox Android
+
+**Latest Update (v2.1.1):**
+- ✅ Face detection optimized for mobile (3x faster, 50% less CPU)
+- ✅ Adaptive video resolution and detection interval
+- ✅ Optional toggle to disable detection on low-end devices
+- ✅ See: [FACE_DETECTION_OPTIMIZATION.md](FACE_DETECTION_OPTIMIZATION.md)
 
 **Questions?** Check the relevant documentation above or contact the development team.

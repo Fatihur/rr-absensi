@@ -288,8 +288,19 @@
               <i class="fas fa-spinner fa-spin"></i> Memuat model deteksi wajah...
             </div>
             
+            <!-- Toggle Face Detection (for performance) -->
+            <div class="text-center mb-2" id="detectionToggle" style="display: none;">
+              <small class="text-muted">
+                <label class="mb-0">
+                  <input type="checkbox" id="enableDetection" checked> 
+                  Aktifkan deteksi wajah
+                  <i class="fas fa-info-circle" title="Nonaktifkan jika aplikasi terasa lambat"></i>
+                </label>
+              </small>
+            </div>
+            
             <!-- Detection Indicators -->
-            <div class="row text-center mt-2">
+            <div class="row text-center mt-2" id="detectionIndicators">
               <div class="col-6">
                 <div class="detection-indicator" id="faceIndicator">
                   <i class="fas fa-user fa-2x text-muted"></i>
@@ -578,6 +589,8 @@
   var detectionInterval;
   var faceDetected = false;
   var smileDetected = false;
+  var isDetecting = false; // Flag to prevent concurrent detections
+  var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // Load face-api.js models
   async function loadModels() {
@@ -586,30 +599,72 @@
       
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
       
+      // Load only essential models for mobile performance
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+        // Skip faceLandmark68Net for better mobile performance
       ]);
       
       modelsLoaded = true;
       $('#detectionStatus').html('<i class="fas fa-check-circle text-success"></i> Model siap! Arahkan wajah Anda ke kamera dan tersenyum.');
+      
+      // Show toggle for mobile users
+      if (isMobile) {
+        $('#detectionToggle').show();
+      }
+      
       console.log('Face detection models loaded successfully');
     } catch (error) {
       console.error('Error loading models:', error);
       $('#detectionStatus').html('<i class="fas fa-exclamation-triangle text-warning"></i> Deteksi wajah tidak tersedia, Anda masih bisa mengambil foto.');
       $('#captureBtn').prop('disabled', false); // Allow capture without detection
+      $('#detectionIndicators').hide();
     }
   }
 
-  // Detect face and smile
+  // Toggle face detection on/off
+  $('#enableDetection').on('change', function() {
+    if ($(this).is(':checked')) {
+      // Enable detection
+      if (!detectionInterval && modelsLoaded) {
+        const detectionDelay = isMobile ? 300 : 150;
+        detectionInterval = setInterval(detectFaceAndSmile, detectionDelay);
+        $('#detectionIndicators').show();
+        $('#detectionStatus').html('<i class="fas fa-check-circle text-success"></i> Deteksi wajah aktif.');
+      }
+    } else {
+      // Disable detection
+      if (detectionInterval) {
+        clearInterval(detectionInterval);
+        detectionInterval = null;
+        $('#detectionIndicators').hide();
+        $('#detectionStatus').html('<i class="fas fa-info-circle text-info"></i> Deteksi wajah dinonaktifkan. Anda bisa langsung ambil foto.');
+        $('#captureBtn').prop('disabled', false); // Allow capture without detection
+        
+        // Clear overlay
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+      }
+    }
+  });
+
+  // Detect face and smile (optimized for mobile)
   async function detectFaceAndSmile() {
-    if (!modelsLoaded || video.paused || video.ended) return;
+    // Prevent concurrent detections
+    if (isDetecting || !modelsLoaded || video.paused || video.ended) return;
+    
+    isDetecting = true;
 
     try {
+      // Use smaller input size for mobile performance
+      const options = new faceapi.TinyFaceDetectorOptions({
+        inputSize: isMobile ? 224 : 416, // Smaller size for mobile
+        scoreThreshold: 0.5
+      });
+
       const detections = await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
+        .detectSingleFace(video, options)
         .withFaceExpressions();
 
       // Clear overlay
@@ -623,7 +678,7 @@
         // Face detected
         faceDetected = true;
         
-        // Draw detection box
+        // Draw detection box (simplified for performance)
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
         ctx.strokeStyle = '#28a745';
         ctx.lineWidth = 3;
@@ -657,6 +712,8 @@
       }
     } catch (error) {
       console.error('Detection error:', error);
+    } finally {
+      isDetecting = false;
     }
   }
 
@@ -690,13 +747,18 @@
       return;
     }
 
-    navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        facingMode: 'user'
-      } 
-    })
+    // Adaptive video resolution for better mobile performance
+    const videoConstraints = isMobile ? {
+      width: { ideal: 640 },  // Lower resolution for mobile
+      height: { ideal: 480 },
+      facingMode: 'user'
+    } : {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      facingMode: 'user'
+    };
+
+    navigator.mediaDevices.getUserMedia({ video: videoConstraints })
       .then(function(s) {
         stream = s;
         video.srcObject = stream;
@@ -709,11 +771,14 @@
         video.addEventListener('loadeddata', () => {
           if (!modelsLoaded) {
             loadModels().then(() => {
-              // Start detection loop
-              detectionInterval = setInterval(detectFaceAndSmile, 100); // Check every 100ms
+              // Start detection loop with adaptive interval
+              // Mobile: 300ms, Desktop: 150ms for better performance
+              const detectionDelay = isMobile ? 300 : 150;
+              detectionInterval = setInterval(detectFaceAndSmile, detectionDelay);
             });
           } else {
-            detectionInterval = setInterval(detectFaceAndSmile, 100);
+            const detectionDelay = isMobile ? 300 : 150;
+            detectionInterval = setInterval(detectFaceAndSmile, detectionDelay);
           }
         });
       })
